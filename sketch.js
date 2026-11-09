@@ -1,6 +1,6 @@
 // noprotect
 // ========================================================
-// A JORNADA DO EMPREENDEDOR (Lógica de Perguntas + Touch + Teclado)
+// A JORNADA DO EMPREENDEDOR (Versão Completa & Responsiva)
 // ========================================================
 
 let avatarPos = { x: 0, y: 10 };
@@ -505,7 +505,7 @@ function handleInteraction(px, py) {
 // VERIFICAÇÃO E PROCESSAMENTO DA RESPOSTA SELECIONADA
 // ----------------------------------------------------
 function checkModalClick(px, py) {
-  if (feedbackTimer !== null) return;
+  if (activeModal === null) return;
   
   let q = questionsList[activeModal];
   let mw = min(width - 30, 540);
@@ -520,17 +520,45 @@ function checkModalClick(px, py) {
   for (let i = 0; i < q.options.length; i++) {
     let btnY = startBtnY + i * (btnHeight + btnGap);
     if (px > mx + 15 && px < mx + mw - 15 && py > btnY && py < btnY + btnHeight) {
-      selectedOptionIndex = i; // Destaca a opção escolhida (Verde/Vermelho)
       let isCorrect = q.options[i].correct;
       
+      // Reproduz o áudio correspondente
       playSound(isCorrect ? "correct" : "explosion");
       
-      feedbackTimer = setTimeout(() => {
-        handleAnswer(isCorrect);
-        selectedOptionIndex = null;
-        feedbackTimer = null;
-      }, 500);
+      // Processa a resposta e fecha o modal imediatamente para iniciar as animações
+      handleAnswer(isCorrect);
       break;
+    }
+  }
+}
+
+function handleAnswer(isCorrect) {
+  let door = doors.find(d => d.questionIdx === activeModal);
+  
+  // Limpa o modal ativo imediatamente para liberar a renderização dos efeitos no canvas
+  activeModal = null;
+  selectedOptionIndex = null;
+  feedbackTimer = null;
+
+  if (door) {
+    if (isCorrect) {
+      door.state = "opening";
+      screenGlowTimer = 40;
+      triggerConfetti(door.x, door.y);
+      addFloatingText(door.x, door.y, "✨ ACERTOU!");
+    } else {
+      capital -= 3000;
+      triggerExplosion(door.x, door.y);
+      addFloatingText(door.x, door.y, "-R$ 3.000,00");
+      door.state = "destroyed";
+      
+      if (capital <= 0) {
+        capital = 0;
+        setTimeout(() => {
+          alert("💥 FALÊNCIA! Seu capital zerou após erros financeiros.");
+          resetGame();
+        }, 300);
+      }
     }
   }
 }
@@ -584,31 +612,6 @@ function executeTrick(door, gx, gy) {
     addFloatingText(gx, gy, "🎁 +R$ 1.000,00!");
     playSound("win");
   }
-}
-
-function handleAnswer(isCorrect) {
-  let door = doors.find(d => d.questionIdx === activeModal);
-  
-  if (isCorrect) {
-    door.state = "opening";
-    screenGlowTimer = 40;
-    triggerConfetti(door.x, door.y);
-    addFloatingText(door.x, door.y, "✨ ACERTOU!");
-  } else {
-    capital -= 3000;
-    triggerExplosion(door.x, door.y);
-    addFloatingText(door.x, door.y, "-R$ 3.000,00");
-    door.state = "destroyed";
-    
-    if (capital <= 0) {
-      capital = 0;
-      setTimeout(() => {
-        alert("💥 FALÊNCIA! Seu capital zerou após erros financeiros.");
-        resetGame();
-      }, 200);
-    }
-  }
-  activeModal = null;
 }
 
 function drawQuestionModal() {
