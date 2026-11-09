@@ -1,6 +1,6 @@
 // noprotect
 // ========================================================
-// A JORNADA DO EMPREENDEDOR (D-Pad Ampliado e Espaçado)
+// A JORNADA DO EMPREENDEDOR (HUD Responsivo & D-Pad Pro)
 // ========================================================
 
 let avatarPos = { x: 0, y: 10 };
@@ -16,8 +16,8 @@ let feedbackTimer = null;
 let screenGlowTimer = 0;
 const exitPos = { x: 20, y: 10 };
 
-let topMargin = 50;
-let bottomMargin = 180; // Aumentado para dar mais espaço no rodapé
+let topMargin = 55;
+let bottomMargin = 180;
 
 const mazeMap = [
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -371,26 +371,38 @@ function drawPlayer2D() {
   pop();
 }
 
+// ----------------------------------------------------
+// CABEÇALHO/PLACAR (HUD) TOTALMENTE RESPONSIVO
+// ----------------------------------------------------
 function drawHUD() {
   push();
-  let hudWidth = min(width - 20, 360);
-  fill(15, 23, 42, 230);
-  stroke(capital > 3000 ? color(46, 204, 113) : color(231, 76, 60), 200);
+  let margin = 12;
+  let hudWidth = width - (margin * 2);
+  let hudHeight = 40;
+  let hudY = (topMargin - hudHeight) / 2;
+
+  // Caixa de fundo estendida de ponta a ponta
+  fill(15, 23, 42, 240);
+  stroke(capital > 3000 ? color(46, 204, 113) : color(231, 76, 60), 220);
   strokeWeight(2);
-  rect(10, 5, hudWidth, 38, 10);
+  rect(margin, hudY, hudWidth, hudHeight, 10);
   
-  fill(capital > 3000 ? color(46, 204, 113) : color(231, 76, 60));
-  textSize(max(12, width * 0.035));
+  // Fonte calculada proporcionalmente ao tamanho da tela
+  let fontSize = max(11, min(14, width * 0.034));
   textStyle(BOLD);
+
+  // Valor do Capital (Esquerda)
+  fill(capital > 3000 ? color(46, 204, 113) : color(231, 76, 60));
+  textSize(fontSize);
   textAlign(LEFT, CENTER);
-  
   let formattedCapital = capital.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  text(`Capital: R$ ${formattedCapital}`, 20, 24);
+  text(`Capital: R$ ${formattedCapital}`, margin + 12, hudY + (hudHeight / 2));
   
-  fill(220);
-  textSize(max(10, width * 0.028));
+  // Ícone/Objetivo (Direita)
+  fill(220, 230, 245);
+  textSize(fontSize * 0.95);
   textAlign(RIGHT, CENTER);
-  text("Empresa 🏢", width - 20, 24);
+  text("Empresa 🏢", margin + hudWidth - 12, hudY + (hudHeight / 2));
   pop();
 }
 
@@ -406,7 +418,6 @@ function drawDPadArea() {
   strokeWeight(1);
   rect(0, mazeBottom, width, bottomMargin);
   
-  // Botões maiores e com mais espaçamento
   let btnSize = 54;
   let gap = 16;
   let cx = width / 2;
@@ -481,7 +492,7 @@ function handleInteraction(px, py) {
   let gap = 16;
   let cx = width / 2;
   let cy = mazeBottom + bottomMargin / 2;
-  let tol = btnSize * 0.7; // Tolerância maior para facilitar a detecção dos toques nos botões
+  let tol = btnSize * 0.7;
 
   // Cima
   if (dist(px, py, cx, cy - btnSize/2 - gap) < tol) { tryMove(0, -1); return; }
