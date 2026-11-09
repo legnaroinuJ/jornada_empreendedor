@@ -1,6 +1,6 @@
 // noprotect
 // ========================================================
-// A JORNADA DO EMPREENDEDOR (Com Feedback Visual no Modal)
+// A JORNADA DO EMPREENDEDOR (D-Pad Ampliado e Espaçado)
 // ========================================================
 
 let avatarPos = { x: 0, y: 10 };
@@ -17,7 +17,7 @@ let screenGlowTimer = 0;
 const exitPos = { x: 20, y: 10 };
 
 let topMargin = 50;
-let bottomMargin = 140;
+let bottomMargin = 180; // Aumentado para dar mais espaço no rodapé
 
 const mazeMap = [
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -394,6 +394,9 @@ function drawHUD() {
   pop();
 }
 
+// ----------------------------------------------------
+// D-PAD ESPAÇADO E OTIMIZADO PARA SMARTPHONES
+// ----------------------------------------------------
 function drawDPadArea() {
   let mazeBottom = topMargin + getTileSize() * 21;
   
@@ -403,33 +406,35 @@ function drawDPadArea() {
   strokeWeight(1);
   rect(0, mazeBottom, width, bottomMargin);
   
-  let btnSize = 42;
+  // Botões maiores e com mais espaçamento
+  let btnSize = 54;
+  let gap = 16;
   let cx = width / 2;
   let cy = mazeBottom + bottomMargin / 2;
 
   textAlign(CENTER, CENTER);
-  textSize(20);
-  strokeWeight(1.5);
+  textSize(24);
+  strokeWeight(2);
 
   // Cima
-  fill(44, 62, 80); stroke(255, 160);
-  rect(cx - btnSize/2, cy - btnSize * 1.25, btnSize, btnSize, 8);
-  fill(255); noStroke(); text("▲", cx, cy - btnSize * 0.75);
+  fill(44, 62, 80); stroke(255, 180);
+  rect(cx - btnSize/2, cy - btnSize - gap, btnSize, btnSize, 12);
+  fill(255); noStroke(); text("▲", cx, cy - btnSize/2 - gap);
 
   // Baixo
-  fill(44, 62, 80); stroke(255, 160);
-  rect(cx - btnSize/2, cy + btnSize * 0.25, btnSize, btnSize, 8);
-  fill(255); noStroke(); text("▼", cx, cy + btnSize * 0.75);
+  fill(44, 62, 80); stroke(255, 180);
+  rect(cx - btnSize/2, cy + gap, btnSize, btnSize, 12);
+  fill(255); noStroke(); text("▼", cx, cy + btnSize/2 + gap);
 
   // Esquerda
-  fill(44, 62, 80); stroke(255, 160);
-  rect(cx - btnSize * 1.25, cy - btnSize/2, btnSize, btnSize, 8);
-  fill(255); noStroke(); text("◄", cx - btnSize * 0.75, cy);
+  fill(44, 62, 80); stroke(255, 180);
+  rect(cx - btnSize - gap, cy - btnSize/2, btnSize, btnSize, 12);
+  fill(255); noStroke(); text("◄", cx - btnSize/2 - gap, cy);
 
   // Direita
-  fill(44, 62, 80); stroke(255, 160);
-  rect(cx + btnSize * 0.25, cy - btnSize/2, btnSize, btnSize, 8);
-  fill(255); noStroke(); text("►", cx + btnSize * 0.75, cy);
+  fill(44, 62, 80); stroke(255, 180);
+  rect(cx + gap, cy - btnSize/2, btnSize, btnSize, 12);
+  fill(255); noStroke(); text("►", cx + btnSize/2 + gap, cy);
 
   pop();
 }
@@ -466,23 +471,26 @@ function touchStarted() {
 }
 
 function handleInteraction(px, py) {
-  // Se houver um modal de pergunta aberto, verifica a resposta clicada
   if (activeModal !== null) {
     checkModalClick(px, py);
     return;
   }
 
   let mazeBottom = topMargin + getTileSize() * 21;
-  let btnSize = 42;
+  let btnSize = 54;
+  let gap = 16;
   let cx = width / 2;
   let cy = mazeBottom + bottomMargin / 2;
-  let tol = btnSize * 0.6;
+  let tol = btnSize * 0.7; // Tolerância maior para facilitar a detecção dos toques nos botões
 
-  // D-Pad Virtual (Rodapé)
-  if (dist(px, py, cx, cy - btnSize * 0.75) < tol) { tryMove(0, -1); return; }
-  if (dist(px, py, cx, cy + btnSize * 0.75) < tol) { tryMove(0, 1); return; }
-  if (dist(px, py, cx - btnSize * 0.75, cy) < tol) { tryMove(-1, 0); return; }
-  if (dist(px, py, cx + btnSize * 0.75, cy) < tol) { tryMove(1, 0); return; }
+  // Cima
+  if (dist(px, py, cx, cy - btnSize/2 - gap) < tol) { tryMove(0, -1); return; }
+  // Baixo
+  if (dist(px, py, cx, cy + btnSize/2 + gap) < tol) { tryMove(0, 1); return; }
+  // Esquerda
+  if (dist(px, py, cx - btnSize/2 - gap, cy) < tol) { tryMove(-1, 0); return; }
+  // Direita
+  if (dist(px, py, cx + btnSize/2 + gap, cy) < tol) { tryMove(1, 0); return; }
 
   // Clique direto no Labirinto
   if (py >= topMargin && py <= mazeBottom) {
@@ -520,12 +528,11 @@ function checkModalClick(px, py) {
   for (let i = 0; i < q.options.length; i++) {
     let btnY = startBtnY + i * (btnHeight + btnGap);
     if (px > mx + 15 && px < mx + mw - 15 && py > btnY && py < btnY + btnHeight) {
-      selectedOptionIndex = i; // 1. Acende a cor Verde/Vermelho no botão
+      selectedOptionIndex = i;
       let isCorrect = q.options[i].correct;
       
       playSound(isCorrect ? "correct" : "explosion");
       
-      // 2. Aguarda 450ms para o jogador VER o botão aceso antes de fechar o modal
       feedbackTimer = setTimeout(() => {
         handleAnswer(isCorrect);
         selectedOptionIndex = null;
@@ -538,8 +545,6 @@ function checkModalClick(px, py) {
 
 function handleAnswer(isCorrect) {
   let door = doors.find(d => d.questionIdx === activeModal);
-  
-  // Limpa o modal ativo após o tempo do feedback
   activeModal = null;
 
   if (door) {
@@ -655,7 +660,6 @@ function drawQuestionModal() {
     let opt = q.options[i];
     let btnY = startBtnY + i * (btnHeight + btnGap);
     
-    // Destaca a opção selecionada com a cor verde ou vermelha antes de fechar
     if (selectedOptionIndex === i) {
       fill(opt.correct ? color(46, 204, 113) : color(231, 76, 60));
       stroke(255);
