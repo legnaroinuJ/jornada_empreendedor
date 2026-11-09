@@ -1,6 +1,6 @@
 // noprotect
 // ========================================================
-// A JORNADA DO EMPREENDEDOR (D-Pad Touch Otimizado Celular)
+// A JORNADA DO EMPREENDEDOR (Lógica de Perguntas + Touch + Teclado)
 // ========================================================
 
 let avatarPos = { x: 0, y: 10 };
@@ -447,66 +447,92 @@ function keyPressed() {
   if (dx !== 0 || dy !== 0) tryMove(dx, dy);
 }
 
-// CAPTURA DE TOQUES REFORÇADA PARA SMARTPHONES
+// ----------------------------------------------------
+// GERENCIADOR UNIFICADO DE INTERAÇÃO (MOUSE E TOUCH)
+// ----------------------------------------------------
+function mousePressed() {
+  handleInteraction(mouseX, mouseY);
+}
+
 function touchStarted() {
-  // Pega a coordenada do toque direto da API Touch do navegador se disponível
   let tx = mouseX;
   let ty = mouseY;
   if (touches && touches.length > 0) {
     tx = touches[0].x;
     ty = touches[0].y;
   }
+  handleInteraction(tx, ty);
+  return false;
+}
 
+function handleInteraction(px, py) {
+  // Se houver um modal de pergunta aberto, verifica a resposta clicada
   if (activeModal !== null) {
-    checkModalClick(tx, ty);
-    return false;
+    checkModalClick(px, py);
+    return;
   }
 
   let mazeBottom = topMargin + getTileSize() * 21;
   let btnSize = 42;
   let cx = width / 2;
   let cy = mazeBottom + bottomMargin / 2;
-
-  // Margem de tolerância para os botões virtuais (facilita o toque com os dedos)
   let tol = btnSize * 0.6;
 
-  // Cima
-  if (dist(tx, ty, cx, cy - btnSize * 0.75) < tol) {
-    tryMove(0, -1);
-    return false;
-  }
-  // Baixo
-  if (dist(tx, ty, cx, cy + btnSize * 0.75) < tol) {
-    tryMove(0, 1);
-    return false;
-  }
-  // Esquerda
-  if (dist(tx, ty, cx - btnSize * 0.75, cy) < tol) {
-    tryMove(-1, 0);
-    return false;
-  }
-  // Direita
-  if (dist(tx, ty, cx + btnSize * 0.75, cy) < tol) {
-    tryMove(1, 0);
-    return false;
-  }
+  // D-Pad Virtual (Rodapé)
+  if (dist(px, py, cx, cy - btnSize * 0.75) < tol) { tryMove(0, -1); return; }
+  if (dist(px, py, cx, cy + btnSize * 0.75) < tol) { tryMove(0, 1); return; }
+  if (dist(px, py, cx - btnSize * 0.75, cy) < tol) { tryMove(-1, 0); return; }
+  if (dist(px, py, cx + btnSize * 0.75, cy) < tol) { tryMove(1, 0); return; }
 
-  // Toque direto nas células do Labirinto
-  if (ty >= topMargin && ty <= mazeBottom) {
+  // Clique direto no Labirinto
+  if (py >= topMargin && py <= mazeBottom) {
     let tileSize = getTileSize();
-    let px = (avatarPos.x + 0.5) * tileSize;
-    let py = topMargin + (avatarPos.y + 0.5) * tileSize;
+    let playerX = (avatarPos.x + 0.5) * tileSize;
+    let playerY = topMargin + (avatarPos.y + 0.5) * tileSize;
     
     let dx = 0, dy = 0;
-    if (abs(tx - px) > abs(ty - py)) {
-      dx = tx > px ? 1 : -1;
+    if (abs(px - playerX) > abs(py - playerY)) {
+      dx = px > playerX ? 1 : -1;
     } else {
-      dy = ty > py ? 1 : -1;
+      dy = py > playerY ? 1 : -1;
     }
     
     tryMove(dx, dy);
   }
-  return false;
+}
+
+// ----------------------------------------------------
+// VERIFICAÇÃO E PROCESSAMENTO DA RESPOSTA SELECIONADA
+// ----------------------------------------------------
+function checkModalClick(px, py) {
+  if (feedbackTimer !== null) return;
+  
+  let q = questionsList[activeModal];
+  let mw = min(width - 30, 540);
+  let mh = min(height - 40, 430);
+  let mx = (width - mw) / 2;
+  let my = (height - mh) / 2;
+  
+  let startBtnY = my + 115;
+  let btnHeight = max(45, (mh - 145) / 3);
+  let btnGap = 10;
+  
+  for (let i = 0; i < q.options.length; i++) {
+    let btnY = startBtnY + i * (btnHeight + btnGap);
+    if (px > mx + 15 && px < mx + mw - 15 && py > btnY && py < btnY + btnHeight) {
+      selectedOptionIndex = i; // Destaca a opção escolhida (Verde/Vermelho)
+      let isCorrect = q.options[i].correct;
+      
+      playSound(isCorrect ? "correct" : "explosion");
+      
+      feedbackTimer = setTimeout(() => {
+        handleAnswer(isCorrect);
+        selectedOptionIndex = null;
+        feedbackTimer = null;
+      }, 500);
+      break;
+    }
+  }
 }
 
 function tryMove(dx, dy) {
@@ -643,42 +669,6 @@ function drawQuestionModal() {
     text(opt.text, mx + 25, btnY + btnHeight / 2, mw - 50);
   }
   pop();
-}
-
-function mousePressed() {
-  if (activeModal !== null) {
-    checkModalClick(mouseX, mouseY);
-  }
-}
-
-function checkModalClick(px, py) {
-  if (feedbackTimer !== null) return;
-  
-  let q = questionsList[activeModal];
-  let mw = min(width - 30, 540);
-  let mh = min(height - 40, 430);
-  let mx = (width - mw) / 2;
-  let my = (height - mh) / 2;
-  
-  let startBtnY = my + 115;
-  let btnHeight = max(45, (mh - 145) / 3);
-  let btnGap = 10;
-  
-  for (let i = 0; i < q.options.length; i++) {
-    let btnY = startBtnY + i * (btnHeight + btnGap);
-    if (px > mx + 15 && px < mx + mw - 15 && py > btnY && py < btnY + btnHeight) {
-      selectedOptionIndex = i;
-      let isCorrect = q.options[i].correct;
-      
-      playSound(isCorrect ? "correct" : "explosion");
-      feedbackTimer = setTimeout(() => {
-        handleAnswer(isCorrect);
-        selectedOptionIndex = null;
-        feedbackTimer = null;
-      }, 450);
-      break;
-    }
-  }
 }
 
 function playSound(type) {
