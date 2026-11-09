@@ -1,6 +1,6 @@
 // noprotect
 // ========================================================
-// A JORNADA DO EMPREENDEDOR (Teclado + Touch + D-Pad Responsivo)
+// A JORNADA DO EMPREENDEDOR (D-Pad Touch Otimizado Celular)
 // ========================================================
 
 let avatarPos = { x: 0, y: 10 };
@@ -16,11 +16,9 @@ let feedbackTimer = null;
 let screenGlowTimer = 0;
 const exitPos = { x: 20, y: 10 };
 
-// Margens dedicadas para UI (Topo para HUD, Baixo para Controles)
 let topMargin = 50;
 let bottomMargin = 140;
 
-// Matriz 21x21 do labirinto com CAMINHO ÚNICO (0 = Caminho, 1 = Parede)
 const mazeMap = [
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
   [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -45,7 +43,6 @@ const mazeMap = [
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
-// Portas ao longo do caminho
 const doorPositions = [
   { x: 1, y: 5, type: "question", questionIdx: 0 },
   { x: 3, y: 1, type: "trick_confetti", questionIdx: -1 },
@@ -397,9 +394,6 @@ function drawHUD() {
   pop();
 }
 
-// ----------------------------------------------------
-// D-PAD FORA DO LABIRINTO (ÁREA INFERIOR DEDICADA)
-// ----------------------------------------------------
 function drawDPadArea() {
   let mazeBottom = topMargin + getTileSize() * 21;
   
@@ -409,38 +403,37 @@ function drawDPadArea() {
   strokeWeight(1);
   rect(0, mazeBottom, width, bottomMargin);
   
-  let btnSize = 38;
+  let btnSize = 42;
   let cx = width / 2;
   let cy = mazeBottom + bottomMargin / 2;
 
   textAlign(CENTER, CENTER);
-  textSize(18);
+  textSize(20);
   strokeWeight(1.5);
 
   // Cima
-  fill(44, 62, 80); stroke(255, 120);
-  rect(cx - btnSize/2, cy - btnSize * 1.1, btnSize, btnSize, 6);
-  fill(255); noStroke(); text("▲", cx, cy - btnSize * 0.6);
+  fill(44, 62, 80); stroke(255, 160);
+  rect(cx - btnSize/2, cy - btnSize * 1.25, btnSize, btnSize, 8);
+  fill(255); noStroke(); text("▲", cx, cy - btnSize * 0.75);
 
   // Baixo
-  fill(44, 62, 80); stroke(255, 120);
-  rect(cx - btnSize/2, cy + btnSize * 0.1, btnSize, btnSize, 6);
-  fill(255); noStroke(); text("▼", cx, cy + btnSize * 0.6);
+  fill(44, 62, 80); stroke(255, 160);
+  rect(cx - btnSize/2, cy + btnSize * 0.25, btnSize, btnSize, 8);
+  fill(255); noStroke(); text("▼", cx, cy + btnSize * 0.75);
 
   // Esquerda
-  fill(44, 62, 80); stroke(255, 120);
-  rect(cx - btnSize * 1.1, cy - btnSize/2, btnSize, btnSize, 6);
-  fill(255); noStroke(); text("◄", cx - btnSize * 0.6, cy);
+  fill(44, 62, 80); stroke(255, 160);
+  rect(cx - btnSize * 1.25, cy - btnSize/2, btnSize, btnSize, 8);
+  fill(255); noStroke(); text("◄", cx - btnSize * 0.75, cy);
 
   // Direita
-  fill(44, 62, 80); stroke(255, 120);
-  rect(cx + btnSize * 0.1, cy - btnSize/2, btnSize, btnSize, 6);
-  fill(255); noStroke(); text("►", cx + btnSize * 0.6, cy);
+  fill(44, 62, 80); stroke(255, 160);
+  rect(cx + btnSize * 0.25, cy - btnSize/2, btnSize, btnSize, 8);
+  fill(255); noStroke(); text("►", cx + btnSize * 0.75, cy);
 
   pop();
 }
 
-// Suporte a WASD + Setas do Teclado
 function keyPressed() {
   if (activeModal !== null) return;
   
@@ -454,46 +447,61 @@ function keyPressed() {
   if (dx !== 0 || dy !== 0) tryMove(dx, dy);
 }
 
+// CAPTURA DE TOQUES REFORÇADA PARA SMARTPHONES
 function touchStarted() {
+  // Pega a coordenada do toque direto da API Touch do navegador se disponível
+  let tx = mouseX;
+  let ty = mouseY;
+  if (touches && touches.length > 0) {
+    tx = touches[0].x;
+    ty = touches[0].y;
+  }
+
   if (activeModal !== null) {
-    checkModalClick(mouseX, mouseY);
+    checkModalClick(tx, ty);
     return false;
   }
 
   let mazeBottom = topMargin + getTileSize() * 21;
-  let btnSize = 38;
+  let btnSize = 42;
   let cx = width / 2;
   let cy = mazeBottom + bottomMargin / 2;
 
-  // Toques no D-Pad Virtual (No Rodapé)
-  if (mouseX > cx - btnSize/2 && mouseX < cx + btnSize/2 &&
-      mouseY > cy - btnSize * 1.1 && mouseY < cy - btnSize * 0.1) {
-    tryMove(0, -1); return false;
+  // Margem de tolerância para os botões virtuais (facilita o toque com os dedos)
+  let tol = btnSize * 0.6;
+
+  // Cima
+  if (dist(tx, ty, cx, cy - btnSize * 0.75) < tol) {
+    tryMove(0, -1);
+    return false;
   }
-  if (mouseX > cx - btnSize/2 && mouseX < cx + btnSize/2 &&
-      mouseY > cy + btnSize * 0.1 && mouseY < cy + btnSize * 1.1) {
-    tryMove(0, 1); return false;
+  // Baixo
+  if (dist(tx, ty, cx, cy + btnSize * 0.75) < tol) {
+    tryMove(0, 1);
+    return false;
   }
-  if (mouseX > cx - btnSize * 1.1 && mouseX < cx - btnSize * 0.1 &&
-      mouseY > cy - btnSize/2 && mouseY < cy + btnSize/2) {
-    tryMove(-1, 0); return false;
+  // Esquerda
+  if (dist(tx, ty, cx - btnSize * 0.75, cy) < tol) {
+    tryMove(-1, 0);
+    return false;
   }
-  if (mouseX > cx + btnSize * 0.1 && mouseX < cx + btnSize * 1.1 &&
-      mouseY > cy - btnSize/2 && mouseY < cy + btnSize/2) {
-    tryMove(1, 0); return false;
+  // Direita
+  if (dist(tx, ty, cx + btnSize * 0.75, cy) < tol) {
+    tryMove(1, 0);
+    return false;
   }
 
-  // Toque direto dentro do Labirinto
-  if (mouseY >= topMargin && mouseY <= mazeBottom) {
+  // Toque direto nas células do Labirinto
+  if (ty >= topMargin && ty <= mazeBottom) {
     let tileSize = getTileSize();
     let px = (avatarPos.x + 0.5) * tileSize;
     let py = topMargin + (avatarPos.y + 0.5) * tileSize;
     
     let dx = 0, dy = 0;
-    if (abs(mouseX - px) > abs(mouseY - py)) {
-      dx = mouseX > px ? 1 : -1;
+    if (abs(tx - px) > abs(ty - py)) {
+      dx = tx > px ? 1 : -1;
     } else {
-      dy = mouseY > py ? 1 : -1;
+      dy = ty > py ? 1 : -1;
     }
     
     tryMove(dx, dy);
