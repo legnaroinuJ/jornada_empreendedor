@@ -1,6 +1,6 @@
 // noprotect
 // ========================================================
-// A JORNADA DO EMPREENDEDOR (Caminho Único + Empresário 2D)
+// A JORNADA DO EMPREENDEDOR (Teclado + Touch + D-Pad Responsivo)
 // ========================================================
 
 let avatarPos = { x: 0, y: 10 };
@@ -13,8 +13,12 @@ let fireworks = [];
 let floatingTexts = [];
 let selectedOptionIndex = null;
 let feedbackTimer = null;
-let screenGlowTimer = 0; // Temporizador para o efeito animado na tela ao acertar
+let screenGlowTimer = 0;
 const exitPos = { x: 20, y: 10 };
+
+// Margens dedicadas para UI (Topo para HUD, Baixo para Controles)
+let topMargin = 50;
+let bottomMargin = 140;
 
 // Matriz 21x21 do labirinto com CAMINHO ÚNICO (0 = Caminho, 1 = Parede)
 const mazeMap = [
@@ -103,8 +107,16 @@ const questionsList = [
 ];
 
 function setup() {
-  createCanvas(800, 750);
+  let availableHeight = windowHeight - topMargin - bottomMargin;
+  let side = min(windowWidth, availableHeight);
+  createCanvas(side, side + topMargin + bottomMargin);
   initDoors();
+}
+
+function windowResized() {
+  let availableHeight = windowHeight - topMargin - bottomMargin;
+  let side = min(windowWidth, availableHeight);
+  resizeCanvas(side, side + topMargin + bottomMargin);
 }
 
 function initDoors() {
@@ -131,17 +143,19 @@ function draw() {
   updateFireworks();
   updateFloatingTexts();
   
-  drawScreenGlow(); // Efeito de brilho animado na tela ao acertar
-  
+  drawScreenGlow();
   drawHUD();
+  drawDPadArea();
+  
   if (activeModal !== null) {
     drawQuestionModal();
   }
 }
 
-// ----------------------------------------------------
-// ANIMAÇÃO DE TELA (GLOW AO ACERTAR)
-// ----------------------------------------------------
+function getTileSize() {
+  return width / 21;
+}
+
 function drawScreenGlow() {
   if (screenGlowTimer > 0) {
     push();
@@ -153,7 +167,6 @@ function drawScreenGlow() {
     strokeWeight(15 + pulse);
     rect(0, 0, width, height);
     
-    // Brilho verde suave por toda a tela
     fill(46, 204, 113, alphaVal * 0.15);
     noStroke();
     rect(0, 0, width, height);
@@ -163,9 +176,6 @@ function drawScreenGlow() {
   }
 }
 
-// ----------------------------------------------------
-// RENDERIZAÇÃO ESTILO BOMBERMAN 3D / RELEVOS
-// ----------------------------------------------------
 function drawMazeIsometric() {
   let tileSize = getTileSize();
   let wallHeight = tileSize * 0.35;
@@ -173,48 +183,41 @@ function drawMazeIsometric() {
   for (let r = 0; r < mazeMap.length; r++) {
     for (let c = 0; c < mazeMap[r].length; c++) {
       let x = c * tileSize;
-      let y = r * tileSize;
+      let y = topMargin + r * tileSize;
       
       if (mazeMap[r][c] === 1) {
         push();
-        // Sombra Projetada
         fill(10, 15, 22, 180);
         noStroke();
-        rect(x + 5, y + 5, tileSize, tileSize + wallHeight, 4);
+        rect(x + 3, y + 3, tileSize, tileSize + wallHeight, 3);
 
-        // Face Frontal / Lateral (Profundidade Bomberman)
         fill(44, 62, 80);
         stroke(28, 40, 53);
-        strokeWeight(1.5);
-        rect(x, y, tileSize, tileSize + wallHeight, 4);
+        strokeWeight(1.2);
+        rect(x, y, tileSize, tileSize + wallHeight, 3);
 
-        // Textura da Parede Frontal
         fill(30, 44, 58);
         rect(x + 2, y + tileSize, tileSize - 4, wallHeight - 2, 2);
 
-        // Topo do Bloco 3D
         fill(74, 98, 126);
         stroke(100, 125, 155);
         strokeWeight(1);
-        rect(x, y, tileSize, tileSize, 4);
+        rect(x, y, tileSize, tileSize, 3);
 
-        // Brilho Superior (Bevel)
         fill(140, 170, 205, 120);
         noStroke();
         rect(x + 2, y + 2, tileSize - 4, tileSize * 0.3, 2);
         pop();
       } else {
-        // Chão Estilizado
         push();
         fill((r + c) % 2 === 0 ? color(34, 44, 60) : color(28, 36, 50));
         stroke(20, 26, 38);
         strokeWeight(1);
         rect(x, y, tileSize, tileSize);
 
-        // Detalhe central no chão
         fill(255, 255, 255, 8);
         noStroke();
-        rect(x + 4, y + 4, tileSize - 8, tileSize - 8);
+        rect(x + 2, y + 2, tileSize - 4, tileSize - 4);
         pop();
       }
     }
@@ -224,17 +227,45 @@ function drawMazeIsometric() {
 function drawExit() {
   let tileSize = getTileSize();
   let x = exitPos.x * tileSize;
-  let y = exitPos.y * tileSize;
+  let y = topMargin + exitPos.y * tileSize;
+  let s = tileSize / 36;
   
   push();
-  fill(46, 204, 113, 80);
+  fill(46, 204, 113, 60);
   stroke(46, 204, 113);
   strokeWeight(2);
-  rect(x + 2, y + 2, tileSize - 4, tileSize - 4, 8);
+  rect(x + 2, y + 2, tileSize - 4, tileSize - 4, 6);
   
-  textSize(tileSize * 0.65);
+  push();
+  translate(x + tileSize / 2, y + tileSize / 2);
+  
+  fill(41, 128, 185);
+  stroke(21, 67, 96);
+  strokeWeight(1.2 * s);
+  rect(-12 * s, -14 * s, 24 * s, 28 * s, 2 * s);
+  
+  fill(241, 196, 15);
+  noStroke();
+  rect(-8 * s, -10 * s, 5 * s, 4 * s, 1 * s);
+  rect(3 * s, -10 * s, 5 * s, 4 * s, 1 * s);
+  rect(-8 * s, -3 * s, 5 * s, 4 * s, 1 * s);
+  rect(3 * s, -3 * s, 5 * s, 4 * s, 1 * s);
+  
+  fill(52, 73, 94);
+  stroke(245);
+  strokeWeight(1 * s);
+  rect(-4 * s, 5 * s, 8 * s, 9 * s, 1 * s);
+  
+  fill(46, 204, 113);
+  noStroke();
+  rect(-10 * s, -16 * s, 20 * s, 4 * s, 1 * s);
+  fill(255);
   textAlign(CENTER, CENTER);
-  text("🏁", x + tileSize / 2, y + tileSize / 2);
+  textSize(max(6, 3 * s));
+  textStyle(BOLD);
+  text("EMPRESA", 0, -14 * s);
+
+  pop();
   pop();
 }
 
@@ -244,7 +275,7 @@ function drawDoors() {
     if (d.state === "destroyed" || d.state === "open") continue;
     
     let x = d.x * tileSize;
-    let y = d.y * tileSize;
+    let y = topMargin + d.y * tileSize;
     
     if (d.state === "opening") {
       d.animProgress += 1 / 40;
@@ -261,60 +292,50 @@ function drawDoors() {
     rect(x + 2, currentY + 2, tileSize - 4, tileSize - 4, 6);
     
     fill(241, 196, 15, alphaVal);
-    rect(x + 5, currentY + 5, tileSize - 10, tileSize - 10, 4);
+    rect(x + 4, currentY + 4, tileSize - 8, tileSize - 8, 4);
     
     fill(255, alphaVal);
     noStroke();
     textAlign(CENTER, CENTER);
-    textSize(tileSize * 0.5);
+    textSize(tileSize * 0.45);
     text(d.type === "question" ? "🔒" : "🎁", x + tileSize / 2, currentY + tileSize / 2);
     pop();
   }
 }
 
-// ----------------------------------------------------
-// PERSONAGEM 2D EMPRESÁRIO (ESTILO BOMBERMAN)
-// ----------------------------------------------------
 function drawPlayer2D() {
   let tileSize = getTileSize();
   let cx = (avatarPos.x + 0.5) * tileSize;
-  let cy = (avatarPos.y + 0.5) * tileSize;
+  let cy = topMargin + (avatarPos.y + 0.5) * tileSize;
 
-  // Animação de respiração / caminhada
   let bounce = sin(frameCount * 0.15) * 2;
   let py = cy + bounce;
 
   push();
-  // Sombra 2D no chão
   fill(0, 0, 0, 140);
   noStroke();
   ellipse(cx, cy + tileSize * 0.35, tileSize * 0.7, tileSize * 0.3);
 
-  // Escala base do personagem
   let s = tileSize / 36;
 
   push();
   translate(cx, py - tileSize * 0.1);
 
-  // 1. Pernas / Sapatos Executivos
   fill(20, 25, 35);
   rect(-7 * s, 10 * s, 5 * s, 6 * s, 2 * s);
   rect(2 * s, 10 * s, 5 * s, 6 * s, 2 * s);
 
-  // 2. Corpo / Terno Azul Marinho
   fill(31, 78, 121);
   stroke(15, 40, 70);
   strokeWeight(1.5 * s);
   rect(-10 * s, -4 * s, 20 * s, 16 * s, 4 * s);
 
-  // 3. Camisa Social Branca & Gravata Vermelha
   noStroke();
   fill(245);
   triangle(-4 * s, -4 * s, 4 * s, -4 * s, 0, 4 * s);
   fill(217, 4, 41);
   triangle(-2 * s, -4 * s, 2 * s, -4 * s, 0, 8 * s);
 
-  // 4. Maleta Executiva de Couro (Mão Direita)
   fill(139, 69, 19);
   stroke(80, 35, 10);
   strokeWeight(1 * s);
@@ -323,19 +344,16 @@ function drawPlayer2D() {
   noStroke();
   rect(12 * s, 0, 2 * s, 2 * s);
 
-  // 5. Cabeça (Tom de Pele)
   fill(255, 218, 185);
   stroke(210, 160, 130);
   strokeWeight(1 * s);
   ellipse(0, -12 * s, 22 * s, 20 * s);
 
-  // 6. Cabelo Executivo Castanho
   fill(60, 35, 15);
   noStroke();
   arc(0, -14 * s, 23 * s, 16 * s, PI, TWO_PI);
   triangle(-11 * s, -14 * s, -7 * s, -14 * s, -9 * s, -9 * s);
 
-  // 7. Olhos & Óculos
   fill(40);
   ellipse(-4 * s, -12 * s, 2.5 * s, 3.5 * s);
   ellipse(4 * s, -12 * s, 2.5 * s, 3.5 * s);
@@ -347,7 +365,6 @@ function drawPlayer2D() {
   rect(1 * s, -15 * s, 6 * s, 5 * s, 1 * s);
   line(-1 * s, -13 * s, 1 * s, -13 * s);
 
-  // 8. Sorriso
   noFill();
   stroke(180, 80, 60);
   strokeWeight(1 * s);
@@ -357,23 +374,131 @@ function drawPlayer2D() {
   pop();
 }
 
-// ----------------------------------------------------
-// CONTROLES E REGRAS DO JOGO
-// ----------------------------------------------------
-function getTileSize() {
-  return min(width / 21, height / 21);
+function drawHUD() {
+  push();
+  let hudWidth = min(width - 20, 360);
+  fill(15, 23, 42, 230);
+  stroke(capital > 3000 ? color(46, 204, 113) : color(231, 76, 60), 200);
+  strokeWeight(2);
+  rect(10, 5, hudWidth, 38, 10);
+  
+  fill(capital > 3000 ? color(46, 204, 113) : color(231, 76, 60));
+  textSize(max(12, width * 0.035));
+  textStyle(BOLD);
+  textAlign(LEFT, CENTER);
+  
+  let formattedCapital = capital.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  text(`Capital: R$ ${formattedCapital}`, 20, 24);
+  
+  fill(220);
+  textSize(max(10, width * 0.028));
+  textAlign(RIGHT, CENTER);
+  text("Empresa 🏢", width - 20, 24);
+  pop();
 }
 
+// ----------------------------------------------------
+// D-PAD FORA DO LABIRINTO (ÁREA INFERIOR DEDICADA)
+// ----------------------------------------------------
+function drawDPadArea() {
+  let mazeBottom = topMargin + getTileSize() * 21;
+  
+  push();
+  fill(18, 24, 38);
+  stroke(35, 45, 65);
+  strokeWeight(1);
+  rect(0, mazeBottom, width, bottomMargin);
+  
+  let btnSize = 38;
+  let cx = width / 2;
+  let cy = mazeBottom + bottomMargin / 2;
+
+  textAlign(CENTER, CENTER);
+  textSize(18);
+  strokeWeight(1.5);
+
+  // Cima
+  fill(44, 62, 80); stroke(255, 120);
+  rect(cx - btnSize/2, cy - btnSize * 1.1, btnSize, btnSize, 6);
+  fill(255); noStroke(); text("▲", cx, cy - btnSize * 0.6);
+
+  // Baixo
+  fill(44, 62, 80); stroke(255, 120);
+  rect(cx - btnSize/2, cy + btnSize * 0.1, btnSize, btnSize, 6);
+  fill(255); noStroke(); text("▼", cx, cy + btnSize * 0.6);
+
+  // Esquerda
+  fill(44, 62, 80); stroke(255, 120);
+  rect(cx - btnSize * 1.1, cy - btnSize/2, btnSize, btnSize, 6);
+  fill(255); noStroke(); text("◄", cx - btnSize * 0.6, cy);
+
+  // Direita
+  fill(44, 62, 80); stroke(255, 120);
+  rect(cx + btnSize * 0.1, cy - btnSize/2, btnSize, btnSize, 6);
+  fill(255); noStroke(); text("►", cx + btnSize * 0.6, cy);
+
+  pop();
+}
+
+// Suporte a WASD + Setas do Teclado
 function keyPressed() {
   if (activeModal !== null) return;
   
   let dx = 0, dy = 0;
-  if (keyCode === LEFT_ARROW || key === 'a' || key === 'A') dx = -1;
-  if (keyCode === RIGHT_ARROW || key === 'd' || key === 'D') dx = 1;
-  if (keyCode === UP_ARROW || key === 'w' || key === 'W') dy = -1;
-  if (keyCode === DOWN_ARROW || key === 's' || key === 'S') dy = 1;
+
+  if (key === 'a' || key === 'A' || key === 'ArrowLeft' || keyCode === LEFT_ARROW) dx = -1;
+  else if (key === 'd' || key === 'D' || key === 'ArrowRight' || keyCode === RIGHT_ARROW) dx = 1;
+  else if (key === 'w' || key === 'W' || key === 'ArrowUp' || keyCode === UP_ARROW) dy = -1;
+  else if (key === 's' || key === 'S' || key === 'ArrowDown' || keyCode === DOWN_ARROW) dy = 1;
   
-  tryMove(dx, dy);
+  if (dx !== 0 || dy !== 0) tryMove(dx, dy);
+}
+
+function touchStarted() {
+  if (activeModal !== null) {
+    checkModalClick(mouseX, mouseY);
+    return false;
+  }
+
+  let mazeBottom = topMargin + getTileSize() * 21;
+  let btnSize = 38;
+  let cx = width / 2;
+  let cy = mazeBottom + bottomMargin / 2;
+
+  // Toques no D-Pad Virtual (No Rodapé)
+  if (mouseX > cx - btnSize/2 && mouseX < cx + btnSize/2 &&
+      mouseY > cy - btnSize * 1.1 && mouseY < cy - btnSize * 0.1) {
+    tryMove(0, -1); return false;
+  }
+  if (mouseX > cx - btnSize/2 && mouseX < cx + btnSize/2 &&
+      mouseY > cy + btnSize * 0.1 && mouseY < cy + btnSize * 1.1) {
+    tryMove(0, 1); return false;
+  }
+  if (mouseX > cx - btnSize * 1.1 && mouseX < cx - btnSize * 0.1 &&
+      mouseY > cy - btnSize/2 && mouseY < cy + btnSize/2) {
+    tryMove(-1, 0); return false;
+  }
+  if (mouseX > cx + btnSize * 0.1 && mouseX < cx + btnSize * 1.1 &&
+      mouseY > cy - btnSize/2 && mouseY < cy + btnSize/2) {
+    tryMove(1, 0); return false;
+  }
+
+  // Toque direto dentro do Labirinto
+  if (mouseY >= topMargin && mouseY <= mazeBottom) {
+    let tileSize = getTileSize();
+    let px = (avatarPos.x + 0.5) * tileSize;
+    let py = topMargin + (avatarPos.y + 0.5) * tileSize;
+    
+    let dx = 0, dy = 0;
+    if (abs(mouseX - px) > abs(mouseY - py)) {
+      dx = mouseX > px ? 1 : -1;
+    } else {
+      dy = mouseY > py ? 1 : -1;
+    }
+    
+    tryMove(dx, dy);
+  }
+  return false;
 }
 
 function tryMove(dx, dy) {
@@ -404,7 +529,7 @@ function tryMove(dx, dy) {
     playSound("win");
     setTimeout(() => {
       let formattedCapital = capital.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      alert(`🎉 PARABÉNS! Você completou toda a jornada empresarial com R$ ${formattedCapital}!`);
+      alert(`🎉 PARABÉNS! Você fundou a sua EMPRESA e completou a jornada com R$ ${formattedCapital}!`);
       resetGame();
     }, 300);
   }
@@ -432,11 +557,11 @@ function handleAnswer(isCorrect) {
   
   if (isCorrect) {
     door.state = "opening";
-    screenGlowTimer = 40; // Ativa animação visual verde na tela
+    screenGlowTimer = 40;
     triggerConfetti(door.x, door.y);
     addFloatingText(door.x, door.y, "✨ ACERTOU!");
   } else {
-    capital -= 3000; // Dedução de R$ 3.000,00 por erro
+    capital -= 3000;
     triggerExplosion(door.x, door.y);
     addFloatingText(door.x, door.y, "-R$ 3.000,00");
     door.state = "destroyed";
@@ -452,31 +577,6 @@ function handleAnswer(isCorrect) {
   activeModal = null;
 }
 
-// ----------------------------------------------------
-// HUD & MODAL DE PERGUNTAS CORRIGIDO E ALINHADO
-// ----------------------------------------------------
-function drawHUD() {
-  push();
-  fill(15, 23, 42, 230);
-  stroke(capital > 3000 ? color(46, 204, 113) : color(231, 76, 60), 200);
-  strokeWeight(2);
-  rect(12, 10, 340, 46, 10);
-  
-  fill(capital > 3000 ? color(46, 204, 113) : color(231, 76, 60));
-  textSize(16);
-  textStyle(BOLD);
-  textAlign(LEFT, CENTER);
-  
-  let formattedCapital = capital.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  text(`Capital: R$ ${formattedCapital}`, 25, 33);
-  
-  fill(220);
-  textSize(13);
-  textAlign(RIGHT, CENTER);
-  text("Objetivo: Chegar à Saída 🏁", width - 20, 33);
-  pop();
-}
-
 function drawQuestionModal() {
   let q = questionsList[activeModal];
   
@@ -484,37 +584,33 @@ function drawQuestionModal() {
   fill(0, 0, 0, 220);
   rect(0, 0, width, height);
   
-  let mw = min(width - 40, 540);
-  let mh = 430;
+  let mw = min(width - 30, 540);
+  let mh = min(height - 40, 430);
   let mx = (width - mw) / 2;
   let my = (height - mh) / 2;
   
-  // Fundo do Modal
   fill(24, 32, 48);
   stroke(52, 152, 219);
   strokeWeight(3);
   rect(mx, my, mw, mh, 14);
   
-  // Título da Etapa
   fill(255);
   noStroke();
   textAlign(CENTER, TOP);
-  textSize(20);
+  textSize(max(16, mw * 0.04));
   textStyle(BOLD);
-  text(q.title, mx + mw / 2, my + 20);
+  text(q.title, mx + mw / 2, my + 15);
   
-  // Enunciado da Pergunta centralizado e contido na caixa
-  textSize(14);
+  textSize(max(12, mw * 0.028));
   textStyle(NORMAL);
-  textLeading(20);
+  textLeading(18);
   fill(220, 230, 245);
   rectMode(CORNER);
-  text(q.question, mx + 25, my + 55, mw - 50, 60);
+  text(q.question, mx + 20, my + 45, mw - 40, 60);
   
-  // Botões das Opções
-  let startBtnY = my + 130;
-  let btnHeight = 65;
-  let btnGap = 15;
+  let startBtnY = my + 115;
+  let btnHeight = max(45, (mh - 145) / 3);
+  let btnGap = 10;
   
   for (let i = 0; i < q.options.length; i++) {
     let opt = q.options[i];
@@ -529,52 +625,54 @@ function drawQuestionModal() {
     }
     
     strokeWeight(2);
-    rect(mx + 25, btnY, mw - 50, btnHeight, 10);
+    rect(mx + 15, btnY, mw - 30, btnHeight, 8);
     
-    // Texto da Alternativa Alinhado no Centro do Botão
     fill(255);
     noStroke();
     textAlign(LEFT, CENTER);
-    textSize(13);
-    textLeading(17);
-    text(opt.text, mx + 40, btnY + btnHeight / 2, mw - 80);
+    textSize(max(11, mw * 0.026));
+    textLeading(15);
+    text(opt.text, mx + 25, btnY + btnHeight / 2, mw - 50);
   }
   pop();
 }
 
 function mousePressed() {
-  if (activeModal !== null && feedbackTimer === null) {
-    let q = questionsList[activeModal];
-    let mw = min(width - 40, 540);
-    let mx = (width - mw) / 2;
-    let mh = 430;
-    let my = (height - mh) / 2;
-    
-    let startBtnY = my + 130;
-    let btnHeight = 65;
-    let btnGap = 15;
-    
-    for (let i = 0; i < q.options.length; i++) {
-      let btnY = startBtnY + i * (btnHeight + btnGap);
-      if (mouseX > mx + 25 && mouseX < mx + mw - 25 && mouseY > btnY && mouseY < btnY + btnHeight) {
-        selectedOptionIndex = i;
-        let isCorrect = q.options[i].correct;
-        
-        playSound(isCorrect ? "correct" : "explosion");
-        feedbackTimer = setTimeout(() => {
-          handleAnswer(isCorrect);
-          selectedOptionIndex = null;
-          feedbackTimer = null;
-        }, 450);
-        break;
-      }
+  if (activeModal !== null) {
+    checkModalClick(mouseX, mouseY);
+  }
+}
+
+function checkModalClick(px, py) {
+  if (feedbackTimer !== null) return;
+  
+  let q = questionsList[activeModal];
+  let mw = min(width - 30, 540);
+  let mh = min(height - 40, 430);
+  let mx = (width - mw) / 2;
+  let my = (height - mh) / 2;
+  
+  let startBtnY = my + 115;
+  let btnHeight = max(45, (mh - 145) / 3);
+  let btnGap = 10;
+  
+  for (let i = 0; i < q.options.length; i++) {
+    let btnY = startBtnY + i * (btnHeight + btnGap);
+    if (px > mx + 15 && px < mx + mw - 15 && py > btnY && py < btnY + btnHeight) {
+      selectedOptionIndex = i;
+      let isCorrect = q.options[i].correct;
+      
+      playSound(isCorrect ? "correct" : "explosion");
+      feedbackTimer = setTimeout(() => {
+        handleAnswer(isCorrect);
+        selectedOptionIndex = null;
+        feedbackTimer = null;
+      }, 450);
+      break;
     }
   }
 }
 
-// ----------------------------------------------------
-// SONS E PARTÍCULAS
-// ----------------------------------------------------
 function playSound(type) {
   let ctx = getAudioContext();
   if (ctx.state !== 'running') ctx.resume();
@@ -605,17 +703,16 @@ function playSound(type) {
   }
 }
 
-// Explosão desacelerada (velocidade reduzida e durabilidade aumentada)
 function triggerExplosion(gx, gy) {
   let tileSize = getTileSize();
   let cx = (gx + 0.5) * tileSize;
-  let cy = (gy + 0.5) * tileSize;
+  let cy = topMargin + (gy + 0.5) * tileSize;
   for (let i = 0; i < 45; i++) {
     particles.push({
       x: cx, y: cy,
-      vx: random(-2.2, 2.2), // Velocidade reduzida
-      vy: random(-2.2, 2.2), // Velocidade reduzida
-      size: random(5, 12),
+      vx: random(-2.2, 2.2),
+      vy: random(-2.2, 2.2),
+      size: random(4, 10),
       color: color(random(220, 255), random(40, 90), 0),
       life: 1.0
     });
@@ -625,12 +722,12 @@ function triggerExplosion(gx, gy) {
 function triggerConfetti(gx, gy) {
   let tileSize = getTileSize();
   let cx = (gx + 0.5) * tileSize;
-  let cy = (gy + 0.5) * tileSize;
+  let cy = topMargin + (gy + 0.5) * tileSize;
   for (let i = 0; i < 65; i++) {
     confetti.push({
       x: cx, y: cy,
       vx: random(-5, 5), vy: random(-6, -2),
-      size: random(5, 10),
+      size: random(4, 8),
       color: color(random(255), random(255), random(255)),
       life: 1.0
     });
@@ -640,14 +737,14 @@ function triggerConfetti(gx, gy) {
 function triggerFireworks(gx, gy) {
   let tileSize = getTileSize();
   let cx = (gx + 0.5) * tileSize;
-  let cy = (gy + 0.5) * tileSize;
+  let cy = topMargin + (gy + 0.5) * tileSize;
   for (let i = 0; i < 80; i++) {
     let angle = random(TWO_PI);
     let speed = random(2, 7);
     fireworks.push({
       x: cx, y: cy,
       vx: cos(angle) * speed, vy: sin(angle) * speed,
-      size: random(3, 7),
+      size: random(3, 6),
       color: color(random(150, 255), random(100, 255), random(200, 255)),
       life: 1.0
     });
@@ -658,22 +755,16 @@ function addFloatingText(gx, gy, txt) {
   let tileSize = getTileSize();
   floatingTexts.push({
     x: (gx + 0.5) * tileSize,
-    y: gy * tileSize,
+    y: topMargin + gy * tileSize,
     text: txt,
     life: 1.0
   });
 }
 
-// Atualização de partículas mais lenta
 function updateParticles() {
   for (let i = particles.length - 1; i >= 0; i--) {
     let p = particles[i];
-    p.x += p.vx; 
-    p.y += p.vy; 
-    p.vx *= 0.96; // Suave resistência do ar
-    p.vy *= 0.96;
-    p.life -= 0.008; // Perda de vida mais lenta
-    
+    p.x += p.vx; p.y += p.vy; p.vx *= 0.96; p.vy *= 0.96; p.life -= 0.008;
     fill(p.color); noStroke();
     ellipse(p.x, p.y, p.size * p.life);
     if (p.life <= 0) particles.splice(i, 1);
@@ -721,22 +812,4 @@ function resetGame() {
   capital = 10000;
   activeModal = null;
   initDoors();
-}
-function touchStarted() {
-  if (activeModal !== null) return;
-  
-  let tileSize = getTileSize();
-  let px = (avatarPos.x + 0.5) * tileSize;
-  let py = (avatarPos.y + 0.5) * tileSize;
-  
-  // Detecta a direção do toque em relação ao personagem
-  let dx = 0, dy = 0;
-  if (abs(mouseX - px) > abs(mouseY - py)) {
-    dx = mouseX > px ? 1 : -1;
-  } else {
-    dy = mouseY > py ? 1 : -1;
-  }
-  
-  tryMove(dx, dy);
-  return false; // Evita rolagem da página no celular
 }
