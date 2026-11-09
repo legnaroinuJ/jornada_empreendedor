@@ -1,6 +1,6 @@
 // noprotect
 // ========================================================
-// A JORNADA DO EMPREENDEDOR (Versão Completa & Responsiva)
+// A JORNADA DO EMPREENDEDOR (Com Feedback Visual no Modal)
 // ========================================================
 
 let avatarPos = { x: 0, y: 10 };
@@ -502,10 +502,10 @@ function handleInteraction(px, py) {
 }
 
 // ----------------------------------------------------
-// VERIFICAÇÃO E PROCESSAMENTO DA RESPOSTA SELECIONADA
+// PROCESSAMENTO DA RESPOSTA COM ANIMAÇÃO DE FEEDBACK
 // ----------------------------------------------------
 function checkModalClick(px, py) {
-  if (activeModal === null) return;
+  if (activeModal === null || feedbackTimer !== null) return;
   
   let q = questionsList[activeModal];
   let mw = min(width - 30, 540);
@@ -520,13 +520,17 @@ function checkModalClick(px, py) {
   for (let i = 0; i < q.options.length; i++) {
     let btnY = startBtnY + i * (btnHeight + btnGap);
     if (px > mx + 15 && px < mx + mw - 15 && py > btnY && py < btnY + btnHeight) {
+      selectedOptionIndex = i; // 1. Acende a cor Verde/Vermelho no botão
       let isCorrect = q.options[i].correct;
       
-      // Reproduz o áudio correspondente
       playSound(isCorrect ? "correct" : "explosion");
       
-      // Processa a resposta e fecha o modal imediatamente para iniciar as animações
-      handleAnswer(isCorrect);
+      // 2. Aguarda 450ms para o jogador VER o botão aceso antes de fechar o modal
+      feedbackTimer = setTimeout(() => {
+        handleAnswer(isCorrect);
+        selectedOptionIndex = null;
+        feedbackTimer = null;
+      }, 450);
       break;
     }
   }
@@ -535,10 +539,8 @@ function checkModalClick(px, py) {
 function handleAnswer(isCorrect) {
   let door = doors.find(d => d.questionIdx === activeModal);
   
-  // Limpa o modal ativo imediatamente para liberar a renderização dos efeitos no canvas
+  // Limpa o modal ativo após o tempo do feedback
   activeModal = null;
-  selectedOptionIndex = null;
-  feedbackTimer = null;
 
   if (door) {
     if (isCorrect) {
@@ -653,6 +655,7 @@ function drawQuestionModal() {
     let opt = q.options[i];
     let btnY = startBtnY + i * (btnHeight + btnGap);
     
+    // Destaca a opção selecionada com a cor verde ou vermelha antes de fechar
     if (selectedOptionIndex === i) {
       fill(opt.correct ? color(46, 204, 113) : color(231, 76, 60));
       stroke(255);
